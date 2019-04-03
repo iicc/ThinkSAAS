@@ -14,77 +14,95 @@ class user extends tsApp{
 		
 		parent::__construct($db);
 	}
+
+    /**
+     * 获取用户头像
+     * @param $strUser
+     * @return string
+     */
+	function getUserFace($strUser){
+        if($strUser['face']){
+            $strFace = tsXimg($strUser['face'],'user',120,120,$strUser['path'],1).'?v='.$strUser['uptime'];
+        }else{
+            $strFace = SITE_URL.'public/images/user_large.jpg';
+        }
+        return $strFace;
+    }
 	
-	//获取最新会员
+	/**
+     * 获取最新会员
+     */
 	function getNewUser($num){
-		$arrNewUserId = $this->findAll('user_info',null,'addtime desc','userid',$num);
-		foreach($arrNewUserId as $item){
-			$arrNewUser[] = $this->getOneUser($item['userid']);
+		$arrUser = $this->findAll('user_info',null,'addtime desc','userid,username,face,path,addtime,uptime',$num);
+		foreach($arrUser as $key=>$item){
+            $arrUser[$key]['face'] = $this->getUserFace($item);
 		}
-		return $arrNewUser;
+		return $arrUser;
 	}
 	
 	//获取活跃会员
 	function getHotUser($num){
-		$arrNewUserId = $this->findAll('user_info',null,'uptime desc','userid',$num);
-		foreach($arrNewUserId as $item){
-			$arrHotUser[] = $this->getOneUser($item['userid']);
-		}
-		return $arrHotUser;
+        $arrUser = $this->findAll('user_info',null,'uptime desc','userid,username,face,path,addtime,uptime',$num);
+        foreach($arrUser as $key=>$item){
+            $arrUser[$key]['face'] = $this->getUserFace($item);
+        }
+        return $arrUser;
 	}
 	
 	//最多关注的用户
 	public function getFollowUser($num){
-		$arrUserId = $this->findAll('user_info',null,'count_followed desc','userid',$num);
-		foreach($arrUserId as $item){
-			$arrFollowUser[] = $this->getOneUser($item['userid']);
-		}
-		return $arrFollowUser;
+        $arrUser = $this->findAll('user_info',null,'count_followed desc','userid,username,face,path,count_followed,addtime,uptime',$num);
+        foreach($arrUser as $key=>$item){
+            $arrUser[$key]['face'] = $this->getUserFace($item);
+        }
+        return $arrUser;
 	}
 	
 	//最多积分的用户
 	public function getScoreUser($num){
-		$arrUserId = $this->findAll('user_info',null,'count_score desc','userid',$num);
-		foreach($arrUserId as $item){
-			$arrScoreUser[] = $this->getOneUser($item['userid']);
-		}
-		return $arrScoreUser;
+        $arrUser = $this->findAll('user_info',null,'count_score desc','userid,username,face,path,count_score,addtime,uptime',$num);
+        foreach($arrUser as $key=>$item){
+            $arrUser[$key]['face'] = $this->getUserFace($item);
+        }
+        return $arrUser;
 	}
+
+    #获取简单的用户信息
+    function getSimpleUser($userid){
+        $strUser = $this->find('user_info',array(
+            'userid'=>$userid,
+        ),'userid,locationid,username,face,path,uptime');
+        $strUser['face'] = $this->getUserFace($strUser);
+        return $strUser;
+    }
 	
 	//获取一个用户的信息
 	function getOneUser($userid){
 			
-			$strUser = $this->find('user_info',array(
-				'userid'=>$userid,
-			));
-			
-			if($strUser){
-			
-				$strUser['username'] = tsTitle($strUser['username']);
-				$strUser['email'] = tsTitle($strUser['email']);
-				$strUser['phone'] = tsTitle($strUser['phone']);
-				$strUser['province'] = tsTitle($strUser['province']);
-				$strUser['city'] = tsTitle($strUser['city']);
-				$strUser['signed'] = tsTitle($strUser['signed']);
-				$strUser['about'] = tsTitle($strUser['about']);
-				$strUser['address'] = tsTitle($strUser['address']);
+        $strUser = $this->find('user_info',array(
+            'userid'=>$userid,
+        ));
 
-				if($strUser['face'] && $strUser['path']){
-					$strUser['face'] = tsXimg($strUser['face'],'user',120,120,$strUser['path'],1);
-				}elseif($strUser['face'] && $strUser['path']==''){
-					$strUser['face']	= SITE_URL.'public/images/'.$strUser['face'];
-				}else{
-					//没有头像
-					$strUser['face']	= SITE_URL.'public/images/user_large.jpg';
-				}
+        if($strUser){
 
-                $strUser['rolename'] = $this->getRole($strUser['allscore']);
+            $strUser['username'] = tsTitle($strUser['username']);
+            $strUser['email'] = tsTitle($strUser['email']);
+            $strUser['phone'] = tsTitle($strUser['phone']);
+            $strUser['province'] = tsTitle($strUser['province']);
+            $strUser['city'] = tsTitle($strUser['city']);
+            $strUser['signed'] = tsTitle($strUser['signed']);
+            $strUser['about'] = tsTitle($strUser['about']);
+            $strUser['address'] = tsTitle($strUser['address']);
 
-			}else{
-				$strUser = '';
-			}
-			
-			return $strUser;
+            $strUser['face'] = $this->getUserFace($strUser);
+
+            $strUser['rolename'] = $this->getRole($strUser['allscore']);
+
+        }else{
+            $strUser = '';
+        }
+
+        return $strUser;
 	}
 	
 	//用户是否存在
@@ -100,14 +118,25 @@ class user extends tsApp{
 		}
 		
 	}
-	
-	//是否登录 
-	public function isLogin($type=''){
+
+
+    /**
+     * @param int $js
+     * @param string $userkey
+     * @return int
+     */
+    public function isLogin($js=0, $userkey=''){
 	
 		$userid = intval($_SESSION['tsuser']['userid']);
 
-        if($type && $userid==0){
-            getJson('你还没有登录',1);
+        if($js && $userid==0 && $userkey==''){
+            getJson('你还没有登录',$js);
+        }
+
+        #通过userkey返回userid
+        if($js && $userid==0 && $userkey){
+            $userid = $this->getUserIdByUserKey($userkey);
+            return $userid;
         }
 
 		if($userid>0){
@@ -123,12 +152,7 @@ class user extends tsApp{
 		}
 	}
 	
-	public function getOneArea($areaid){
-	
-		$strArea = $this->find('area',array('areaid'=>$areaid));
-		return $strArea;
-	
-	}
+
 	
 	//根据用户积分获取用户角色
 	public function getRole($score){
@@ -146,35 +170,52 @@ class user extends tsApp{
 		}
 	}
 	
-	/*
+	/**
 	 * 增加积分
 	 * $userid 用户ID
 	 * $scorename 积分名字 
 	 * $score 积分
+	 * @issx 上线限制0限制1不限制
 	 */
-	public function addScore($userid,$scorename,$score){
+	public function addScore($userid,$scorename,$score,$issx=0){
 		if($userid && $scorename && $score){
-			//添加积分记录
-			$this->create('user_score_log',array(
-				'userid'=>$userid,
-				'scorename'=>$scorename,
-				'score'=>$score,
-				'status'=>0,
-				'addtime'=>time(),
-			));
-			//计算总积分
-			$strUser = $this->find('user_info',array(
-				'userid'=>$userid,
-			));
 
-            $strAllScore = $this->db->once_fetch_assoc("select SUM(score) as allscore from ".dbprefix."user_score_log where `userid`='$userid' and  `status`='0'");
 
-			$this->update('user_info',array(
-				'userid'=>$userid,
-			),array(
-                'allscore'=>$strAllScore['allscore'],
-				'count_score'=>$strUser['count_score']+$score,
-			));
+		    #计算当天已经获得的积分
+            $starttime = strtotime(date('Y-m-d 00:00:01'));
+            $endtime = strtotime(date('Y-m-d 23:59:59'));
+            $strDayScore = $this->db->once_fetch_assoc("select SUM(score) as dayscore from ".dbprefix."user_score_log where `userid`='$userid' and  `status`='0' and `addtime`>='$starttime' and `addtime`<='$endtime'");
+
+            #用户每日获得积分上限
+            if($strDayScore['dayscore']<$GLOBALS['TS_SITE']['dayscoretop'] || $issx==1){
+
+                //添加积分记录
+                $this->create('user_score_log',array(
+                    'userid'=>$userid,
+                    'scorename'=>$scorename,
+                    'score'=>$score,
+                    'status'=>0,
+                    'addtime'=>time(),
+                ));
+
+                //计算总积分
+                $strUser = $this->find('user_info',array(
+                    'userid'=>$userid,
+                ));
+
+                $strAllScore = $this->db->once_fetch_assoc("select SUM(score) as allscore from ".dbprefix."user_score_log where `userid`='$userid' and  `status`='0'");
+
+                $this->update('user_info',array(
+                    'userid'=>$userid,
+                ),array(
+                    'allscore'=>$strAllScore['allscore'],
+                    'count_score'=>$strUser['count_score']+$score,
+                ));
+
+
+            }
+
+
 		}
 	}
 	
@@ -183,33 +224,49 @@ class user extends tsApp{
 	 */
 	public function delScore($userid,$scorename,$score){
 		if($userid && $scorename && $score){
-			//添加积分记录
-			$this->create('user_score_log',array(
-				'userid'=>$userid,
-				'scorename'=>$scorename,
-				'score'=>$score,
-				'status'=>1,
-				'addtime'=>time(),
-			));
+
 			//计算总积分
 			$strUser = $this->find('user_info',array(
 				'userid'=>$userid,
 			));
-			$this->update('user_info',array(
-				'userid'=>$userid,
-			),array(
-				'count_score'=>$strUser['count_score']-$score,
-			));
+
+			if($strUser['count_score']>$score){
+
+                //添加积分记录
+                $this->create('user_score_log',array(
+                    'userid'=>$userid,
+                    'scorename'=>$scorename,
+                    'score'=>$score,
+                    'status'=>1,
+                    'addtime'=>time(),
+                ));
+
+                $this->update('user_info',array(
+                    'userid'=>$userid,
+                ),array(
+                    'count_score'=>$strUser['count_score']-$score,
+                ));
+
+                return true;
+
+            }else{
+
+			    return false;
+
+            }
+
+
 		}
 	}
 	
 	//处理积分
-	function doScore($app,$ac,$ts='',$uid=0){
+	function doScore($app,$ac,$ts='',$uid=0,$mg=''){
 		$userid = intval($_SESSION['tsuser']['userid']);
 		if($uid) $userid=$uid;
 		$strScore = $this->find('user_score',array(
 			'app'=>$app,
 			'action'=>$ac,
+			'mg'=>$mg,
 			'ts'=>$ts,
 		));
 		
@@ -397,6 +454,51 @@ class user extends tsApp{
         }
 
     }
+
+
+    /**
+     * 通过 userid 获取 userkey
+     * @param $userid
+     * @return bool|string
+     */
+    public function getUserKeyByUserId($userid){
+        include 'thinksaas/class.crypt.php';
+        $crypt= new crypt();
+        return $crypt->encrypt($userid,$GLOBALS['TS_SITE']['site_pkey']);
+    }
+
+    /**
+     * 通过userkey获取userid
+     * @param $userkey
+     */
+    public function getUserIdByUserKey($userkey){
+        include 'thinksaas/class.crypt.php';
+        $crypt= new crypt();
+        $userid = $crypt->decrypt($userkey,$GLOBALS['TS_SITE']['site_pkey']);
+
+        $isUser = $this->findCount('user',array(
+            'userid'=>$userid,
+        ));
+
+        if($isUser == 0){
+
+            echo json_encode(array(
+
+                'status'=> 0,
+                'msg'=> '非法操作',
+                'data'=> '',
+
+            ));
+            exit;
+
+        }else{
+
+            return $userid;
+
+        }
+    }
+
+
 	
 	//析构函数
 	public function __destruct(){

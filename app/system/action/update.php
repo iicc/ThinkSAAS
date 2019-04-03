@@ -1,32 +1,6 @@
 <?php 
 defined('IN_TS') or die('Access Denied.');
-
-//循环删除目录和文件函数
-function delDirAndFile($dirName){
-	if($handle = opendir($dirName)){
-	   while(false !== ($item = readdir($handle))){
-		   if($item != "." && $item != ".."){
-			   if(is_dir($dirName.'/'.$item)){
-					delDirAndFile($dirName.'/'.$item);
-			   }else{
-				   if(unlink($dirName.'/'.$item)){
-					
-				   }
-			   }
-		   }
-	   }
-	   closedir($handle);
-	   if(rmdir($dirName)){
-		
-	   }
-	}
-}
-
-
 function file_list($path){
-	
-	require_once 'thinksaas/class.Diff.php';
-
     if ($handle = opendir($path)){
         while (false !== ($file = readdir($handle))){
             if ($file != "." && $file != ".."){
@@ -34,57 +8,30 @@ function file_list($path){
                     file_list($path."/".$file);
                 }else{
 					$upfile = $path."/".$file;
-					$nfile = substr($path.'/'.$file,18);
-					
+					$nfile = substr($path.'/'.$file,13);
+					$npath = substr($path,13);
+
+					if(abcefile($npath)==='1'){
+					    #return $npath;
+					    getJson($npath.'目录没有可写权限，linux请给755权限',1,0);
+                    }
+
 					if(is_file($nfile)){
-					
-						//if(Diff::compareFiles($nfile, $upfile)){
-							if(copy($upfile,$nfile)===false){
-								return '1';exit; //不可拷贝就返回1
-							}
-						//}
+
+                        if(copy($upfile,$nfile)===false){
+                            getJson('升级文件覆盖失败',1,0);
+                        }
 					
 					}else{
 						if(copy($upfile,$nfile)===false){
-							return '1';exit; //不可拷贝就返回1
+                            getJson('升级文件覆盖失败',1,0);
 						}
 					}
-				
-
-                }
-            }
-        }
-    }
-	
-	
-	
-}
-
-//处理1.98版本以下的程序把插件数据转到data目录下
-function plugin2data($path){
-    if ($handle = opendir($path)){
-        while (false !== ($file = readdir($handle))){
-            if ($file != "." && $file != ".."){
-                if (is_dir($path."/".$file)){
-                    plugin2data($path."/".$file);
-                }else{
-					$upfile = $path."/".$file;
-					if(strpos($upfile,'data.php')){
-
-						$arrData = explode('/',$upfile);
-						$newfile = 'data/'.$arrData[0].'_'.$arrData[1].'_'.$arrData[2].'.php';
-						
-						copy($upfile,$newfile);
-					
-					}
-					
                 }
             }
         }
     }
 }
-
-
 function abcefile($path){
     if ($handle = opendir($path)){
         while (false !== ($file = readdir($handle))){
@@ -95,7 +42,6 @@ function abcefile($path){
 					$upfile = $path."/".$file;
 					//如果文件存在
 					if(is_file($upfile)){
-				
 						//检测文件是否可写
 						if(is_writable($upfile)==false){
 							return '1';exit;//不可写就停止并返回1
@@ -112,40 +58,38 @@ function abcefile($path){
 switch($ts){
 	
 	case "":
-		
 		include template('update');
 		break;
 		
  	case "iswritable":
 	
+        $msg = '';
 
-		//检测几个函数是否可用
-		$f_opendir = function_exists('opendir');
-		$f_readdir = function_exists('readdir');
-		$f_copy = function_exists('copy');
-	
-		
-		$rs = abcefile(THINKROOT);
-		
-		if($f_opendir==false){
-			echo '0';exit;	//opendir函数不可用
-		}
-		
-		if($f_readdir==false){
-			echo '1';exit;	//readdir函数不可用
-		}
-		
-		if($f_copy==false){
-			echo '2';exit;	//copy函数不可用
-		}
-		
-		if($rs){
-			echo '3';exit; //文件不可写
-		}
-		
-		echo '4';exit;	//完全没问题
-		
+        #检测php必要函数
+        if(function_exists('opendir')==false) $msg .= 'opendir函数不可用<br />';#opendir
+        if(function_exists('readdir')==false) $msg .= 'readdir函数不可用<br />';#readdir
+        if(function_exists('copy')==false) $msg .= 'copy函数不可用<br />';#copy
+
+        #检查php必要扩展
+        if(extension_loaded('Fileinfo')==false) $msg .= 'Fileinfo扩展不可用<br />';#Fileinfo
+
+        #检测upgrade目录是否可写
+		if(abcefile('upgrade')) $msg .= 'upgrade目录不可写<br />';
+
+
+		echo $msg;
+
+
 		break;
+
+    //手动升级检测
+    case "hand":
+
+        $upid = intval($_GET['upid']);
+
+        include template('update_hand');
+        break;
+
 		
 	//第一步检测可写权限
 	case "one":
@@ -155,8 +99,6 @@ switch($ts){
 		
 	//第二步，升级数据库
 	case "two":
-	
-		
 		
 		include template('update_two');
 		break;
@@ -196,18 +138,21 @@ switch($ts){
 		break;
 		
 	case "threedo":
-		
-		
-		$upversion = trim($_GET['upversion']);
-		
-		$filezip = 'thinksaas'.$upversion.'.zip';
 
-		//先删除旧文件
+		$upversion = trim($_GET['upversion']);
+
+		if($upversion==''){
+		    getJson('版本号有问题',1,0);
+        }
+
+		$filezip = $upversion.'.zip';
+
+		//先删除旧的zip升级文件
 		unlink('upgrade/'.$filezip);
+        delDir('upgrade/'.$upversion);
 
 		//拼接出要下载的远程文件
-		//$upfile = 'http://file.thinksaas.cn/down/'.$filezip;
-		$upfile = 'http://git.oschina.net/thinksaas/thinksaas/repository/archive?ref=master';
+		$upfile = 'https://www.thinksaas.cn/upgrade/'.$filezip;
 		
 		//第一步：多线程下载zip压缩文件
 		$urls=array(
@@ -241,45 +186,24 @@ switch($ts){
 		}
 		curl_multi_close($mh);
 
-		chmod('upgrade/'.$filezip,0777);
+		chmod('upgrade/'.$filezip,0755);
 		
 		//第二步：下载完之后开始解压覆盖原有文件
-		
 		include 'thinksaas/pclzip.lib.php';
 		$archive = new PclZip('upgrade/'.$filezip);
-		if ($archive->extract(PCLZIP_OPT_PATH, 'upgrade',PCLZIP_OPT_REPLACE_NEWER) == 0) {
-			//die("Error : ".$archive->errorInfo(true));
-			
-			echo '0';exit;//解压失败
+		if ($archive->extract(PCLZIP_OPT_PATH, 'upgrade/'.$upversion,PCLZIP_OPT_REPLACE_NEWER) == 0) {
+            getJson('升级包解压失败',1,0);
 			
 		}else{
 			unlink('upgrade/'.$filezip);
 		}
-		
-		//直接循环覆盖吧
-		$filers = file_list('upgrade/thinksaas');
 
-		if($filers){
-			echo '1';exit;
-		}
+		//直接循环覆盖吧
+		file_list('upgrade/'.$upversion);
 		
 		//删除目录
-		delDirAndFile('upgrade/thinksaas');
-		
-		//更新数据库配置缓存下
-		$arrOptions = $new['system']->findAll('system_options',null,null,'optionname,optionvalue');
-		foreach($arrOptions as $item){
-			$arrOption[$item['optionname']] = $item['optionvalue'];
-		}
-		fileWrite('system_options.php','data',$arrOption);
-		$tsMySqlCache->set('system_options',$arrOption);
-		
-		//删除模板缓存
-		rmrf('cache/template');
-		
-		
-		echo '2';exit;
-	
-		break;
+        delDir('upgrade/'.$upversion);
 
+        getJson('升级成功',1,1);
+		break;
 }

@@ -7,20 +7,26 @@ $strLocation = $new['location']->find('location',array(
 	'locationid'=>$locationid,
 ));
 
+$strLocation['title'] = tsTitle($strLocation['title']);
+$strLocation['content'] = tsTitle($strLocation['content']);
+
 //文章
 $arrArticle = $new['location']->findAll('article',array(
 	'locationid'=>$locationid,
 ),'addtime desc',null,10);
 //资料
+/*
 $arrAttach = $new['location']->findAll('attach',array(
 	'locationid'=>$locationid,
 ),'addtime desc',null,10);
+*/
 //帖子
 $arrTopic = $new['location']->findAll('group_topic',array(
 	'locationid'=>$locationid,
 ),'addtime desc',null,10);
 foreach($arrTopic as $key=>$item){
-	$arrTopic[$key]['user'] = aac('user')->getOneUser($item['userid']);
+    $arrTopic[$key]['title'] = tsTitle($item['title']);
+	$arrTopic[$key]['user'] = aac('user')->getSimpleUser($item['userid']);
 	$arrTopic[$key]['group'] = $new['location']->find('group',array(
 		'groupid'=>$item['groupid'],
 	));
@@ -39,7 +45,7 @@ $arrWeibo = $new['location']->findAll('weibo',array(
 	'locationid'=>$locationid,
 ),'addtime desc',null,10);
 foreach($arrWeibo as $key=>$item){
-	$arrWeibo[$key]['user'] = aac('user')->getOneUser($item['userid']);
+	$arrWeibo[$key]['user'] = aac('user')->getSimpleUser($item['userid']);
 }
 
 //是否是同城用户

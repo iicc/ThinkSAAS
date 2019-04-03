@@ -32,6 +32,15 @@ class weiboAction extends weibo{
         $pageUrl = pagination($weiboNum, 20, $page, $url);
 
 
+        #热门唠叨
+        $arrHotWeibo = $this->findAll('weibo',null,'count_comment desc',null,10);
+
+        foreach($arrHotWeibo as $key=>$item){
+            $arrHotWeibo[$key]['content'] = tsDecode($item['content']);
+            $arrHotWeibo[$key]['user'] = aac('user')->getOneUser($item['userid']);
+        }
+
+
         $title = '唠叨';
         include template('index');
     }
@@ -46,12 +55,10 @@ class weiboAction extends weibo{
         $userid = aac('user')->isLogin(1);
 
         //判断发布者状态
-		/*
-        if(aac('user')->isPublisher()==false) {
-            getJson('不好意思，你还没有权限发布内容！',$js);
-        }
-		*/
+        if(aac('user')->isPublisher()==false) getJson('不好意思，你还没有权限发布内容！',$js);
 
+        //发布时间限制
+        if(aac('system')->pubTime()==false) getJson('不好意思，当前时间不允许发布内容！',$js);
 
         $content = tsClean($_POST['content']);
 
@@ -61,11 +68,11 @@ class weiboAction extends weibo{
 
         $isaudit = 0;
 
-
-        //过滤内容开始
-        aac('system')->antiWord($content);
-        //过滤内容结束
-
+        if($GLOBALS['TS_USER']['isadmin']==0){
+            //过滤内容开始
+            aac('system')->antiWord($content,$js);
+            //过滤内容结束
+        }
 
         $weiboid = $this->create('weibo',array(
             'userid'=>$userid,
@@ -76,16 +83,16 @@ class weiboAction extends weibo{
             'uptime'=>date('Y-m-d H:i:s'),
         ));
 
-
         //feed开始
+        /*
         $feed_template = '<span class="pl">说：</span><div class="quote"><span class="inq">{content}</span> <span><a class="j a_saying_reply" href="{link}" rev="unfold">回应</a></span></div>';
         $feed_data = array(
             'link'	=> tsurl('weibo','show',array('id'=>$weiboid)),
             'content'	=> cututf8(t($content),'0','50'),
         );
         aac('feed')->add($userid,$feed_template,$feed_data);
+        */
         //feed结束
-
 
         getJson('发布成功！',$js,2,tsurl('weibo','show',array('id'=>$weiboid)));
 		
@@ -133,6 +140,14 @@ class weiboAction extends weibo{
             'userid'=>$strWeibo['userid'],
         ),'addtime desc',null,20);
 
+
+        foreach($arrWeibo as $key=>$item){
+            if($item['content']==''){
+                $arrWeibo[$key]['content'] = $strWeibo['user']['username'].'的唠叨('.$item['weiboid'].')';
+            }
+        }
+
+
         $weiboNum = $this->findCount('weibo',array(
             'userid'=>$strWeibo['userid'],
         ));
@@ -149,7 +164,13 @@ class weiboAction extends weibo{
 
 
 
-        $title = cututf8(t(tsDecode($strWeibo['content'])),0,100,false);
+
+
+        if($strWeibo['content']==''){
+            $title = $strWeibo['user']['username'].'的唠叨('.$strWeibo['weiboid'].')';
+        }else{
+            $title = cututf8(t(tsDecode($strWeibo['content'])),0,100,false);
+        }
 
         include template('show');
     }
@@ -209,6 +230,13 @@ class weiboAction extends weibo{
 
 		//用户是否登录
 		$userid = aac('user')->isLogin();
+
+        //判断发布者状态
+        if(aac('user')->isPublisher()==false) tsNotice('不好意思，你还没有权限发布内容！');
+
+        //发布时间限制
+        if(aac('system')->pubTime()==false) tsNotice('不好意思，当前时间不允许发布内容！');
+
 		$weiboid = intval($_POST['weiboid']);
 		$touserid = intval($_POST['touserid']);
 		$content = tsClean($_POST['content']);
@@ -335,7 +363,11 @@ class weiboAction extends weibo{
             include 'app/'.$GLOBALS['TS_URL']['app'].'/admin.'.$GLOBALS['TS_URL']['app'].'.php';
             $appAdmin = $GLOBALS['TS_URL']['app'].'Admin';
             $newAdmin = new $appAdmin($GLOBALS['db']);
-            $newAdmin->$GLOBALS['TS_URL']['mg']();
+            #$newAdmin->$GLOBALS['TS_URL']['mg']();
+
+            $amg = $GLOBALS['TS_URL']['mg'];
+            $newAdmin->$amg();
+
         }else{
             ts404();
         }
@@ -349,7 +381,8 @@ class weiboAction extends weibo{
             include 'app/'.$GLOBALS['TS_URL']['app'].'/my.'.$GLOBALS['TS_URL']['app'].'.php';
             $appMy = $GLOBALS['TS_URL']['app'].'My';
             $newMy = new $appMy($GLOBALS['db']);
-            $newMy->$GLOBALS['TS_URL']['my']();
+            $myFun = $GLOBALS['TS_URL']['my'];
+            $newMy->$myFun();
         }else{
             ts404();
         }

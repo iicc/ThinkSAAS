@@ -6,42 +6,39 @@
 
 ## 开发环境
 
-* php >= 5.3
+* php >= 5.4 (支持php7)
 * MySQL >= 5.0
 * Apache / Nginx
 * Windows / Linux
+* 建议采用lnmp或者lamp环境
 
 ## 系统特点
 
 * 开发简单，php新手也可以开发强大功能
 * 单一入口
-* 扩展强大，支持应用扩展和wordpress式插件扩展
+* 扩展强大，支持应用扩展和插件扩展
 * APP可单独配置独立数据库
-* WEB端和server端API接口统一
 * 多端自适应，集成bootstrap
 * 底层加载速度快，抗压和并发能力强
-* 集成ueditor，内容编辑异常强大
+* 支持composer方式安装php第三方扩展库
 * 适合个人和团队协作开发
-* 集群、分布式部署、各种缓存、数据库读写分离等各种针对大数据和高并发的策略都在实践中
 
-## 系统功能
+## 系统基础功能
 
 * 用户中心模块(user)
 * 系统管理模块(system)
 * 小组模块(group)
 * 相册模块(photo)
 * 资料模块(attach)
-* 动态模块(feed)
 * 标签模块(tag)
 * 邮件模块(mail)
 * 消息模块(message)
 * 唠叨模块(weibo)
 * 搜索模块(search)
 * 同城模块(location)
-* 积分兑换(redeem)
 * 文章(article)
 * 我的社区(my)
-* 支持QQ登录，微博登录，豆瓣登录
+* Email注册登录
 
 ## 用户协议
 

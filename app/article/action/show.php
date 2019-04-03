@@ -16,9 +16,11 @@ if ($articleid == 0 || $strArticle == '') {
 }
 
 // 是否审核
-if ($strArticle ['isaudit'] == 1) {
+if ($strArticle ['isaudit'] == 1 && $TS_USER['isadmin']==0 && $TS_USER['userid']!=$strArticle['userid']) {
 	tsNotice ( '内容审核中...' );
 }
+
+$cateid = $strArticle['cateid'];
 
 $strArticle['title'] = tsTitle($strArticle['title']);
 
@@ -27,10 +29,21 @@ $tpUrl = tpPage($strArticle['content'],'article','show',array('id'=>$strArticle[
 $strArticle['content'] = tsDecode($strArticle['content'],$tp);
 
 $strArticle ['tags'] = aac ( 'tag' )->getObjTagByObjid ( 'article', 'articleid', $articleid );
-$strArticle ['user'] = aac ( 'user' )->getOneUser ( $strArticle ['userid'] );
+$strArticle ['user'] = aac ( 'user' )->getSimpleUser ( $strArticle ['userid'] );
 $strArticle ['cate'] = $new ['article']->find ( 'article_cate', array (
 		'cateid' => $strArticle ['cateid'] 
 ) );
+
+
+
+// 上一篇
+$strUp = $new['article']->find('article', "`articleid`< '$articleid' and `isaudit`='0'", 'articleid,title','articleid desc');
+if($strUp) $strUp['title'] = tsTitle($strUp['title']);
+// 下一篇
+$strNext = $new['article']->find('article', "`articleid`> '$articleid' and `isaudit`='0'", 'articleid,title','articleid asc');
+if($strNext) $strNext['title'] = tsTitle($strNext['title']);
+
+
 
 // 获取评论
 $page = isset ( $_GET ['page'] ) ? intval ( $_GET ['page'] ) : 1;
@@ -47,7 +60,7 @@ $arrComments = $new ['article']->findAll ( 'article_comment', array (
 foreach ( $arrComments as $key => $item ) {
 	$arrComment [] = $item;
 	$arrComment[$key]['content'] = tsDecode($item['content']);
-	$arrComment [$key] ['user'] = aac ( 'user' )->getOneUser ( $item ['userid'] );
+	$arrComment [$key] ['user'] = aac ( 'user' )->getSimpleUser ( $item ['userid'] );
 }
 
 $commentNum = $new ['article']->findCount ( 'article_comment', array (
@@ -62,7 +75,7 @@ $strArticle ['tags'] = aac ( 'tag' )->getObjTagByObjid ( 'article', 'articleid',
 //最新文章
 $arrArticle = $new ['article']->findAll ( 'article', array(
     'isaudit'=>0,
-), 'addtime desc', null, 10 );
+), 'addtime desc', 'articleid,title', 10 );
 
 // 推荐阅读
 $arrRecommend = $new ['article']->getRecommendArticle ();

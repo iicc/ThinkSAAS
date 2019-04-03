@@ -1,31 +1,22 @@
 <?php
-
-defined('IN_TS') or die('Access Denied.');
 /**
  * @copyright (c) ThinkSAAS All Rights Reserved
  * @code by QiuJun
  * @Email:thinksaas@qq.com
  * @site:www.thinksaas.cn
  */
-if ('5' != substr(PHP_VERSION, 0, 1)) {
-    exit("ThinkSAAS运行环境要求PHP5！");
-}
+defined('IN_TS') or die('Access Denied.');
 
 //核心配置文件 $TS_CF 系统配置变量
 $TS_CF = include THINKROOT . '/thinksaas/config.php';
+$TS_CF['info']['version'] = include 'upgrade/version.php';#版本信息
 
 // 如果是调试模式，打开警告输出
 if ($TS_CF['debug']) {
-    if (substr(PHP_VERSION, 0, 3) == "5.3") {
-        error_reporting(~E_WARNING & ~E_NOTICE & E_ALL & ~E_DEPRECATED);
-    } else {
-        error_reporting(E_ALL & ~E_NOTICE & ~E_WARNING);
-    }
+    error_reporting(E_ALL & ~E_NOTICE & ~E_WARNING);
 } else {
     error_reporting(0);
 }
-
-@set_magic_quotes_runtime(0);
 
 //ini_set("memory_limit","120M");
 
@@ -74,9 +65,6 @@ session_start();
 if ($TS_CF['memcache'] && extension_loaded('memcache')) {
     $TS_MC = Memcache::connect($TS_CF['memcache']['host'], $TS_CF['memcache']['port']);
 }
-
-//处理html编码
-header('Content-Type: text/html; charset=UTF-8');
 //安装专用变量
 $install = isset($_GET['install']) ? $_GET['install'] : 'index';
 
@@ -126,6 +114,8 @@ $TS_URL = array(
     'in'=>isset($_GET['in']) ? tsUrlCheck($_GET['in']) : '',//plugin专用
     'tp'=>isset($_GET['tp']) ? tsUrlCheck($_GET['tp']) : '1',//tp 内容分页
     'page'=>isset($_GET['page']) ? tsUrlCheck($_GET['page']) : '1',//page 列表分页
+    'js'=>isset($_GET['js']) ? tsUrlCheck($_GET['js']) : '1',//输出json数据 接口专用
+    'userkey'=>isset($_REQUEST['userkey']) ? tsUrlCheck($_REQUEST['userkey']) : '',//加密用户ID，专为客户端使用
 );
 
 //下面是过渡，直到把所有的参数都改完
@@ -139,6 +129,8 @@ $plugin = $TS_URL['plugin'];
 $in = $TS_URL['in'];
 $tp = $TS_URL['tp'];
 $page = $TS_URL['page'];
+$js = $TS_URL['js'];
+$userkey = $TS_URL['userkey'];
 
 
 //APP二级域名支持，同时继续支持url原生写法
@@ -239,7 +231,7 @@ if ($TS_CF['logs']) {
 
 //控制访客权限
 if($TS_USER=='' && $TS_SITE['visitor'] == 1){
-    if($ac!='home' && $ac!='register' && $ac!='login' && $ac!='forgetpwd' && $ac!='resetpwd' && $app!='api'){
+    if($app!='pubs' && $ac!='home' && $ac!='register' && $ac!='login' && $ac!='forgetpwd' && $ac!='resetpwd' && $app!='api'){
         tsHeaderUrl(tsUrl('pubs','home'));
     }
 }
@@ -365,7 +357,10 @@ if (is_file('app/' . $TS_URL['app'] . '/class.' . $TS_URL['app'] . '.php')) {
         include_once 'app/'.$TS_URL['app'].'/action.'.$TS_URL['app'].'.php';
         $appAction = $TS_URL['app'].'Action';
         $newAction = new $appAction($db);
-        $newAction->$TS_URL['ac']();
+        if(!method_exists($newAction,$ac)){
+            qiMsg( '未定义'.$ac.'方法！');
+        }
+        $newAction->$ac();
     }else{
         //面向目录和文件的逻辑加载写法
         include 'app.php';

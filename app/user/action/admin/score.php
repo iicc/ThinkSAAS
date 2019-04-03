@@ -18,6 +18,7 @@ switch($ts){
 		
 		$app = trim($_POST['app']);
 		$action = trim($_POST['action']);
+		$mg = trim($_POST['mg']);
 		$ts = trim($_POST['ts']);
 		$status = intval($_POST['status']);
 		
@@ -27,6 +28,7 @@ switch($ts){
 			'score'=>$score,
 			'app'=>$app,
 			'action'=>$action,
+			'mg'=>$mg,
 			'ts'=>$ts,
 			'status'=>$status,
 		));
@@ -41,6 +43,7 @@ switch($ts){
 		$score = intval($_POST['score']);
 		$app = trim($_POST['app']);
 		$action = trim($_POST['action']);
+		$mg = trim($_POST['mg']);
 		$ts = trim($_POST['ts']);
 		$status = intval($_POST['status']);
 		
@@ -50,6 +53,7 @@ switch($ts){
 			'score'=>$score,
 			'app'=>$app,
 			'action'=>$action,
+			'mg'=>$mg,
 			'ts'=>$ts,
 			'status'=>$status,
 		));
@@ -69,10 +73,31 @@ switch($ts){
 	
 		$userid = intval($_POST['userid']);
 		$score = intval($_POST['score']);
+		$status = intval($_POST['status']);
 		$scorename = trim($_POST['scorename']);
 		
 		if($userid && $score && $scorename){
-			aac('user')->addScore($userid,$scorename,$score);
+
+		    $return = false;
+
+		    if($status==1){
+		        //减积分
+		        $return = $new['user']->delScore($userid,$scorename,$score);
+		        $jiajian = '减去';
+            }else{
+		        //加积分
+                $return = $new['user']->addScore($userid,$scorename,$score,1);
+                $jiajian = '增加';
+            }
+
+            if($return==true){
+		        //发送系统消息
+                $msg_userid = '0';
+                $msg_touserid = $userid;
+                $msg_content = $scorename.$jiajian.$score.'积分';
+                aac('message')->sendmsg($msg_userid,$msg_touserid,$msg_content);
+            }
+
 			qiMsg('操作成功！');
 		}else{
 			qiMsg('操作失败！');

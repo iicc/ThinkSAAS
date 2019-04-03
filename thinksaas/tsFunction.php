@@ -7,6 +7,7 @@ defined('IN_TS') or die('Access Denied.');
  * @Email:thinksaas@qq.com
  * @TIME:2010-12-18
  */
+use Intervention\Image\ImageManagerStatic as Image;
 
 /**
  * 加载某一APP类
@@ -133,29 +134,35 @@ EOT;
  */
 function pagination($count, $perlogs, $page, $url ,$suffix = '') {
 
-	$urlset = $GLOBALS['TS_SITE']['site_urltype'];
-	if ($urlset == 3 && !strpos($url,'index.php')) {
-		$suffix = '.html';
-	}
+    $urlset = $GLOBALS['TS_SITE']['site_urltype'];
+    if ($urlset == 3 && !strpos($url,'index.php')) {
+        $suffix = '.html';
+    }
 
-	$pnums = @ceil($count / $perlogs);
-	$re = '';
-	for ($i = $page - 5; $i <= $page + 5 && $i <= $pnums; $i++) {
-		if ($i > 0) {
-			if ($i == $page) {
-				$re .= ' <span class="current">' . $i . '</span> ';
-			} else {
-				$re .= '<a href="' . $url . $i . $suffix . '">' . $i . '</a>';
-			}
-		}
-	}
-	if ($page > 6)
-		$re = '<a href="' . $url . '1' . $suffix . '" title="首页">&laquo;</a> ...' . $re;
-	if ($page + 5 < $pnums)
-		$re .= '... <a href="' . $url . $pnums . $suffix . '" title="尾页">&raquo;</a>';
-	if ($pnums <= 1)
-		$re = '';
-	return $re;
+    $pnums = @ceil($count / $perlogs);
+    $res = '<nav aria-label="Page navigation example"><ul class="pagination justify-content-center">';
+    $re = '';
+    for ($i = $page - 5; $i <= $page + 5 && $i <= $pnums; $i++) {
+        if ($i > 0) {
+            if ($i == $page) {
+                $re .= '<li class="page-item active"><a class="page-link">' . $i . '</a></li>';
+            } else {
+                $re .= '<li class="page-item"><a class="page-link" href="' . $url . $i . $suffix . '">' . $i . '</a></li>';
+            }
+        }
+    }
+    if ($page > 6)
+        $re = '<li class="page-item"><a class="page-link" href="' . $url . '1' . $suffix . '" title="首页">&laquo;</a></li>' . $re;
+    if ($page + 5 < $pnums)
+        $re .= '<li class="page-item"><a class="page-link" href="' . $url . $pnums . $suffix . '" title="尾页">&raquo;</a></li>';
+
+    $re .= '</ul></nav>';
+
+    $res .= $re;
+
+    if ($pnums <= 1)
+        $res = '';
+    return $res;
 }
 
 /**
@@ -235,11 +242,11 @@ function getIp() {
  */
 function t($text) {
 	$text = tsDecode($text);
-	$text = @preg_replace('/\[.*?\]/is', '', $text);
+	$text = preg_replace('/\[.*?\]/is', '', $text);
 	$text = cleanJs($text);
 	// 彻底过滤空格BY QINIAO
-	$text = @preg_replace('/\s(?=\s)/', '', $text);
-	$text = @preg_replace('/[\n\r\t]/', ' ', $text);
+	$text = preg_replace('/\s(?=\s)/', '', $text);
+	$text = preg_replace('/[\n\r\t]/', ' ', $text);
 	$text = str_replace('  ', ' ', $text);
 	// $text = str_replace ( ' ', '', $text );
 	$text = str_replace('&nbsp;', '', $text);
@@ -358,10 +365,11 @@ function fileRead($dfile) {
 
 /**
  * 把数组转换为,号分割的字符串
- * @param unknown $arr
+ * @param 一维数组 $arr
+ * @param 分割符号，默认,号
  * @return Ambigous <string, unknown>
  */
-function arr2str($arr) {
+function arr2str($arr,$fg=',') {
 	$str = '';
 	$count = 1;
 	if (is_array($arr)) {
@@ -369,7 +377,7 @@ function arr2str($arr) {
 			if ($count == 1) {
 				$str .= $a;
 			} else {
-				$str .= ',' . $a;
+				$str .= $fg . $a;
 			}
 			$count++;
 		}
@@ -599,17 +607,17 @@ function delDir($dir = '') {
 	if (!file_exists($dir))
 		return true;
 	if (!is_dir($dir) || is_link($dir))
-		return @unlink($dir);
+		return unlink($dir);
 	foreach (scandir ( $dir ) as $item) {
 		if ($item == '.' || $item == '..')
 			continue;
 		if (!delDir($dir . "/" . $item)) {
-			@chmod($dir . "/" . $item, 0777);
+			chmod($dir . "/" . $item, 0777);
 			if (!delDir($dir . "/" . $item))
 				return false;
 		};
 	}
-	return @rmdir($dir);
+	return rmdir($dir);
 }
 
 /**
@@ -643,38 +651,74 @@ function md10($str = '') {
  */
 function tsXimg($file, $app, $w, $h, $path = '', $c = '0') {
 
-	if (!$file) {
-		return false;
-	} else {
+    if (!$file) {
+        return false;
+    } else {
 
-		//$info = explode ( '.', $file );
-		//$name = md10 ( $file ) . '_' . $w . '_' . $h . '.' . $info [1];
+        $arrInfo = explode('/', $file);
+        $name = end($arrInfo);
 
-		$info = explode('/', $file);
-		$name = $info[2];
+        $arrType = explode('.',$name);
+        $type = end($arrType);
 
-		if ($path == '') {
-			$cpath = 'cache/' . $app . '/' . $w . '/' . $name;
-		} else {
-			$cpath = 'cache/' . $app . '/' . $path . '/' . $w . '/' . $name;
-		}
+        $cpath = 'cache/' . $app . '/' . $path . '/' . md5($w . $h . $app . $name) . '.jpg';
 
-		if (!is_file($cpath)) {
-			createFolders('cache/' . $app . '/' . $path . '/' . $w);
-			$dest = 'uploadfile/' . $app . '/' . $file;
-			$arrImg = getimagesize($dest);
-			if ($arrImg[0] <= $w) {
-				copy($dest, $cpath);
+        if (!is_file($cpath)) {
 
-			} else {
-				require_once 'thinksaas/tsImage.php';
-				$resizeimage = new tsImage("$dest", $w, $h, $c, "$cpath");
-			}
-		}
+            Image::configure(array('driver' => 'gd'));//gd or imagick
 
-		return SITE_URL . $cpath;
+            createFolders('cache/' . $app . '/' . $path);
+            $dest = 'uploadfile/' . $app . '/' . $file;
+            $arrImg = getimagesize($dest);
 
-	}
+            try{
+                $img = Image::make($dest);
+            }catch (Exception $e){
+                //$e->getMessage();
+                return SITE_URL . 'public/images/nopic.jpg';
+                exit();
+            }
+
+            if ($arrImg[0] <= $w) {
+
+                if($c){
+                    if($w && $h){
+                        $img->fit($w, $h);
+                    }elseif($w && $h==''){
+                        $img->resize($w, null, function ($constraint) {
+                            $constraint->aspectRatio();
+                        });
+                    }
+                }
+
+            } else {
+
+                if($w && $h){
+                    $img->fit($w, $h);
+                }elseif($w && $h==''){
+                    $img->resize($w, null, function ($constraint) {
+                        $constraint->aspectRatio();
+                    });
+                }
+
+            }
+
+
+            if($arrImg[0]>400 && $w>400 && in_array($type,array('jpg','jpeg','png'))){
+                #图片大于400px加水印
+                $watermark = Image::make('public/images/sy.png');
+                $img->insert($watermark, 'bottom-left',10,10);
+            }
+
+
+            $img->save($cpath);
+
+        }
+
+        return SITE_URL . $cpath;
+
+    }
+
 }
 
 /**
@@ -691,7 +735,10 @@ function tsDimg($file, $app, $w, $h, $path) {
 	$info = explode('/', $file);
 	$name = $info[2];
 
-	unlink('cache/' . $app . '/' . $path . '/' . $w . '/' . $name);
+    $cpath = 'cache/' . $app . '/' . $path . '/' . md5($w . $h . $app . $name) . '.jpg';
+
+	unlink($cpath);
+
 	return true;
 }
 
@@ -907,7 +954,7 @@ function reurl() {
 	$rurl = substr($_SERVER['REQUEST_URI'], strlen($scriptName[0]));
 	//过滤掉网站目录剩下的就是URL部分
 
-	if (strpos($rurl, 'index.php?') === false) {
+	if (strpos($rurl, 'index.php?') === false  || strpos ( $rurl, '?openid=' ) == true  || strpos ( $rurl, '?from=' ) == true){
 
 		if (preg_match('/index.php/i', $rurl)) {
 			$rurl = str_replace('index.php', '', $rurl);
@@ -959,6 +1006,7 @@ function reurl() {
 				foreach ($params as $p => $v) {
 					switch ($p) {
 						case 0 :
+                            if($v=='?from=singlemessage' || $v=='?from=groupmessage' || $v=='?from=timeline' || $v=='?tdsourcetag=s_pctim_aiomsg' || $v=='?_wv=1031' || $v=='?tdsourcetag=s_pcqq_aiomsg') $v='home';
 							$_GET['app'] = $v;
 							break;
 						case 1 :
@@ -1075,6 +1123,7 @@ function reurl() {
 				foreach ($params as $p => $v) {
 					switch ($p) {
 						case 0 :
+                            if($v=='?from=singlemessage' || $v=='?from=groupmessage' || $v=='?from=timeline' || $v=='?tdsourcetag=s_pctim_aiomsg' || $v=='?_wv=1031' || $v=='?tdsourcetag=s_pcqq_aiomsg') $v='home';
 							$_GET['app'] = $v;
 							break;
 						case 1 :
@@ -1318,12 +1367,17 @@ function delDirFile($dir) {
 function tsUpload($files, $projectid, $dir, $uptypes) {
 	
 	if ($files['size'] > 0) {
-	
-	
+
 		//上传图片大小控制
 		if(in_array('png',$uptypes) || in_array('jpg',$uptypes) || in_array('gif',$uptypes) || in_array('jpeg',$uptypes)){
-		
-			if($GLOBALS['TS_SITE']['photo_size']){
+
+            $type = getImagetype($files['tmp_name']);
+
+            if(!in_array($type,$uptypes)){
+                tsNotice('非法操作');
+            }
+
+            if($GLOBALS['TS_SITE']['photo_size']){
 				$upsize = $GLOBALS['TS_SITE']['photo_size']*1048576;
 				
 				if($files ['size']>$upsize){
@@ -1333,7 +1387,6 @@ function tsUpload($files, $projectid, $dir, $uptypes) {
 			}
 		
 		}
-		
 
 		$menu2 = intval($projectid / 1000);
 
@@ -1350,7 +1403,7 @@ function tsUpload($files, $projectid, $dir, $uptypes) {
 		$arrType = explode('.', strtolower($files['name']));
 		// 转小写一下
 
-		$type = array_pop($arrType);
+		$type = end($arrType);
 
 		if (in_array($type, $uptypes)) {
 
@@ -1367,7 +1420,23 @@ function tsUpload($files, $projectid, $dir, $uptypes) {
 
 			$filesize = filesize($dest);
 			if (intval($filesize) > 0) {
+
+                #继续验证图片
+                if(in_array('png',$uptypes) || in_array('jpg',$uptypes) || in_array('gif',$uptypes) || in_array('jpeg',$uptypes)){
+
+                    try{
+                        Image::make($dest);
+                    }catch (Exception $e){
+                        //echo 'Message: ' .$e->getMessage();
+                        unlink($dest);
+                        return false;
+                        exit();
+                    }
+
+                }
+
 				return array('name' => tsFilter($files['name']), 'path' => $path, 'url' => $path . '/' . $name, 'type' => $type, 'size' => tsFilter($files['size']));
+
 			} else {
 				return false;
 			}
@@ -1488,21 +1557,24 @@ function urlcontent($content) {
  * @param unknown $serial_str
  * @return mixed
  */
-function mb_unserialize($serial_str) {
-	$serial_str = @preg_replace('!s:(\d+):"(.*?)";!se', "'s:'.strlen('$2').':\"$2\";'", $serial_str);
-	$serial_str = str_replace("\r", "", $serial_str);
-	return unserialize($serial_str);
+function mb_unserialize($serial_str, $t = NULL) {
+    $serial_str = @preg_replace_callback('!s:(\d+):"(.*?)";!s', function( $m ){
+        return 's:'.strlen($m[2]).':"'.$m[2].'";';
+    }, $serial_str);
+    $serial_str = str_replace("\r", "", $serial_str);
+    return unserialize($serial_str);
 }
-
 /**
  * 反序列化为ASC
  * @param unknown $serial_str
  * @return mixed
  */
 function asc_unserialize($serial_str) {
-	$serial_str = @preg_replace('!s:(\d+):"(.*?)";!se', '"s:".strlen("$2").":\"$2\";"', $serial_str);
-	$serial_str = str_replace("\r", "", $serial_str);
-	return unserialize($serial_str);
+    $serial_str = @preg_replace_callback('!s:(\d+):"(.*?)";!s', function( $m ){
+        return 's:'.strlen($m[2]).':"'.$m[2].';"';
+    }, $serial_str);
+    $serial_str = str_replace("\r", "", $serial_str);
+    return unserialize($serial_str);
 }
 
 /**
@@ -1827,16 +1899,21 @@ function closetags($html) {
 function tsUrlCheck($parameter) {
 	
 	$parameter = trim($parameter);
-	$arrStr = str_split($parameter);
-	$strOk = '%-_1234567890abcdefghijklmnopqrstuvwxyz';
-	foreach ($arrStr as $key => $item) {
-		if (stripos($strOk, $item) === false) {
-			//qiMsg('非法URL参数！');
-			header('Location: /');
-			exit;
-		}
-	}
-	return $parameter;
+	if($parameter){
+        $arrStr = str_split($parameter);
+        $strOk = '%-_1234567890abcdefghijklmnopqrstuvwxyz';
+        foreach ($arrStr as $key => $item) {
+            if (stripos($strOk, $item) === false) {
+                //qiMsg('非法URL参数！');
+                header ( "HTTP/1.1 404 Not Found" );
+                header ( "Status: 404 Not Found" );
+                #header('Location: /');
+                exit;
+            }
+        }
+        return $parameter;
+    }
+
 }
 
 function ludou_width_height($content) {
@@ -1936,27 +2013,41 @@ function isMobile() {
 	return false;
 }
 
-/*
- * @data 返回的数据或者提示语
- * @status 0提示、1刷新、2跳转
- * @js判断是否是通过js方式处理的
- * @url 当status=2要跳转的url页面
+/**
+ * @param $msg          返回的数据或者提示语
+ * @param int $js       判断是否是通过json方式处理的
+ * @param int $status   状态：0不正常、1正常
+ * @param string $url   当status=2要跳转的url页面
+ * @param string $data  返回的数据
+ * @param int $isview   是否有html模版文件加载0无1有
  */
-function getJson($data, $js = 1, $status = 0, $url = '') {
-	if ($js) {
-		//header("Content-type: application/json;charset=utf-8");
-		if ($status == 2 && $url) {
-			echo json_encode(array('status' => $status, 'data' => $data, 'url' => $url, ));
-		} else {
-			echo json_encode(array('status' => $status, 'data' => $data, ));
-		}
-		exit ;
-	} elseif ($js == 0 && $status == 2 && $url) {
-		header('Location: ' . $url);
-		exit ;
-	} else {
-		tsNotice($data);
-	}
+function getJson($msg, $js = 1, $status = 1, $url = '', $data='',$isview=0) {
+    if ($js) {
+        header("Content-type: application/json;charset=utf-8");
+        if ($url) {
+            echo json_encode(array(
+                'status' => $status,
+                'msg'=>$msg,
+                'data' => $data,
+                'url' => $url,
+            ));
+        } else {
+            echo json_encode(array(
+                'status' => $status,
+                'msg'=>$msg,
+                'data' => $data,
+            ));
+        }
+        exit ;
+    }
+    if($isview==0){
+        if($js == 0 && $url) {
+            header('Location: ' . $url);
+            exit ;
+        } else {
+            tsNotice($msg);
+        }
+    }
 }
 
 /*
@@ -1964,6 +2055,12 @@ function getJson($data, $js = 1, $status = 0, $url = '') {
  * @photourl  图片绝对路径http
  * @projectid  项目ID
  * @dir	存储目录，都在uploadfile下，一般根据app名称命名
+ */
+/**
+ * @param $photourl
+ * @param $projectid
+ * @param $dir
+ * @return array
  */
 function tsUploadPhotoUrl($photourl, $projectid, $dir) {
 	$menu2 = intval($projectid / 1000);
@@ -1990,33 +2087,42 @@ function tsUploadPhotoUrl($photourl, $projectid, $dir) {
 }
 
 
-function getdomain($url) { 
-$host = strtolower ( $url ); 
-if (strpos ( $host, '/' ) !== false) { 
-$parse = @parse_url ( $host ); 
-$host = $parse ['host']; 
-} 
-$topleveldomaindb = array ('com', 'edu', 'gov', 'int', 'mil', 'net', 'org', 'biz', 'info', 'pro', 'name', 'museum', 'coop', 'aero', 'xxx', 'idv', 'mobi', 'cc', 'me','in','io','gg','co' ); 
-$str = ''; 
-foreach ( $topleveldomaindb as $v ) { 
-$str .= ($str ? '|' : '') . $v; 
-} 
+/**
+ * 获取域名的根域名
+ * @param $url
+ * @return string
+ */
+function getdomain($url) {
+    $host = strtolower ( $url );
+    if (strpos ( $host, '/' ) !== false) {
+        $parse = @parse_url ( $host );
+        $host = $parse ['host'];
+    }
+    $topleveldomaindb = array ('com', 'edu', 'gov', 'int', 'mil', 'net', 'org', 'biz', 'info', 'pro', 'name', 'museum', 'coop', 'aero', 'xxx', 'idv', 'mobi', 'cc', 'me','in','io','gg','co' );
+    $str = '';
+    foreach ( $topleveldomaindb as $v ) {
+        $str .= ($str ? '|' : '') . $v;
+    }
 
-$matchstr = "[^\.]+\.(?:(" . $str . ")|\w{2}|((" . $str . ")\.\w{2}))$"; 
-if (preg_match ( "/" . $matchstr . "/ies", $host, $matchs )) { 
-$domain = $matchs ['0']; 
-} else { 
-$domain = $host; 
-} 
-return $domain; 
-} 
+    $matchstr = "[^\.]+\.(?:(" . $str . ")|\w{2}|((" . $str . ")\.\w{2}))$";
+    if (preg_match ( "/" . $matchstr . "/ies", $host, $matchs )) {
+        $domain = $matchs ['0'];
+    } else {
+        $domain = $host;
+    }
+    return $domain;
+}
 
-/*
- * 验证手机号，支持13、15、18、17号段
- * 
+
+/**
+ * 验证手机号，支持13、15、18、17、19号段
+ *
+ * @param $phone
+ * @return bool
  */
 function isPhone($phone){
-	if(preg_match("/^13[0-9]{1}[0-9]{8}$|15[0-9]{1}[0-9]{8}$|18[0-9]{1}[0-9]{8}$|17[0-9]{1}[0-9]{8}$/",$phone)){    
+	//if(preg_match("/^13[0-9]{1}[0-9]{8}$|15[0-9]{1}[0-9]{8}$|18[0-9]{1}[0-9]{8}$|17[0-9]{1}[0-9]{8}$|19[0-9]{1}[0-9]{8}$/",$phone)){
+	if(preg_match("/^1[0-9]{10}$/",$phone)){
 		return true;
 	}else{
 		return false;
@@ -2095,7 +2201,10 @@ function dump($var, $echo = true, $label = null, $strict = true) {
 		return $output;
 }
 
-//404
+
+/**
+ * 返回404提示
+ */
 function ts404(){
     header ( "HTTP/1.1 404 Not Found" );
     header ( "Status: 404 Not Found" );
@@ -2104,14 +2213,22 @@ function ts404(){
     exit ();
 }
 
-//跳转
+
+/**
+ * URL跳转
+ *
+ * @param $url
+ */
 function tsHeaderUrl($url){
 	header('Location: '.$url);
 	exit;
 }
 
-/*
+
+/**
  * curl get 方式请求url
+ * @param $URL
+ * @return bool|mixed
  */
 function curl_get_file_contents($URL){
     $c = curl_init();
@@ -2197,7 +2314,7 @@ function GetUrlToDomain($domain) {
     $domain = $arrDomain['path'];
 
     $re_domain = '';
-    $domain_postfix_cn_array = array('com', 'net', 'org', 'gov', 'edu', 'com.cn', 'cn','cc','me','tv','la','net.cn','org.cn','top','wang','hk','co','pw','ren','asia','biz','gov.cn','tw','com.tw','us','tel','info','website','host','io','press','mobi');
+    $domain_postfix_cn_array = array('com', 'net', 'org', 'gov', 'edu', 'com.cn', 'cn','cc','me','tv','la','net.cn','org.cn','top','wang','hk','co','pw','ren','asia','biz','gov.cn','tw','com.tw','us','tel','info','website','host','io','press','mobi','wiki','io');
 
     $domain = str_replace('http://','',$domain);
     $domain = str_replace('https://','',$domain);
@@ -2269,4 +2386,132 @@ function getTextPhotos($text,$num=0){
     }else{
         return $arrPhoto;
     }
+}
+
+/**
+ * 获取时区数组
+ */
+function getArrTimezone(){
+    return array (
+        'Pacific/Kwajalein' => '(GMT -12:00) International Date Line West',
+        'Pacific/Samoa' => '(GMT -11:00) Midway Island, Samoa',
+        'Pacific/Honolulu' => '(GMT -10:00) Hawaii',
+        'US/Alaska' => '(GMT -9:00) Alaska',
+        'US/Pacific' => '(GMT -8:00) Pacific Time (US &amp; Canada); Tijuana',
+        'US/Mountain' => '(GMT -7:00) Mountain Time (US &amp; Canada)',
+        'US/Arizona' => '(GMT -7:00) Arizona',
+        'Mexico/BajaNorte' => '(GMT -7:00) Chihuahua, La Paz, Mazatlan',
+        'US/Central' => '(GMT -6:00) Central Time (US &amp; Canada)',
+        'America/Costa_Rica' => '(GMT -6:00) Central America',
+        'Mexico/General' => '(GMT -6:00) Guadalajara, Mexico City, Monterrey',
+        'Canada/Saskatchewan' => '(GMT -6:00) Saskatchewan',
+        'US/Eastern' => '(GMT -5:00) Eastern Time (US &amp; Canada)',
+        'America/Bogota' => '(GMT -5:00) Bogota, Lima, Quito',
+        'US/East-Indiana' => '(GMT -5:00) Indiana (East)',
+        'Canada/Eastern' => '(GMT -4:00) Atlantic Time (Canada)',
+        'America/Caracas' => '(GMT -4:00) Caracas, La Paz',
+        'America/Santiago' => '(GMT -4:00) Santiago',
+        'Canada/Newfoundland' => '(GMT -3:30) Newfoundland',
+        'Canada/Atlantic' => '(GMT -3:00) Brasilia, Greenland',
+        'America/Buenos_Aires' => '(GMT -3:00) Buenos Aires, Georgetown',
+        'Atlantic/Cape_Verde' => '(GMT -1:00) Cape Verde Is.',
+        'Atlantic/Azores' => '(GMT -1:00) Azores',
+        'Africa/Casablanca' => '(GMT 0) Casablanca, Monrovia',
+        'Europe/Dublin' => '(GMT 0) Greenwich Mean Time : Dublin, Edinburgh, London',
+        'Europe/Amsterdam' => '(GMT +1:00) Amsterdam, Berlin, Rome, Stockholm, Vienna',
+        'Europe/Prague' => '(GMT +1:00) Belgrade, Bratislava, Budapest, Prague',
+        'Europe/Paris' => '(GMT +1:00) Brussels, Copenhagen, Madrid, Paris',
+        'Europe/Warsaw' => '(GMT +1:00) Sarajevo, Skopje, Warsaw, Zagreb',
+        'Africa/Bangui' => '(GMT +1:00) West Central Africa',
+        'Europe/Istanbul' => '(GMT +2:00) Athens, Beirut, Bucharest, Cairo, Istanbul	',
+        'Asia/Jerusalem' => '(GMT +2:00) Harare, Jerusalem, Pretoria',
+        'Europe/Kiev' => '(GMT +2:00) Helsinki, Kiev, Riga, Sofia, Tallinn, Vilnius',
+        'Asia/Riyadh' => '(GMT +3:00) Kuwait, Nairobi, Riyadh',
+        'Europe/Moscow' => '(GMT +3:00) Baghdad, Moscow, St. Petersburg, Volgograd',
+        'Asia/Tehran' => '(GMT +3:30) Tehran',
+        'Asia/Muscat' => '(GMT +4:00) Abu Dhabi, Muscat',
+        'Asia/Baku' => '(GMT +4:00) Baku, Tbilsi, Yerevan',
+        'Asia/Kabul' => '(GMT +4:30) Kabul',
+        'Asia/Yekaterinburg' => '(GMT +5:00) Yekaterinburg',
+        'Asia/Karachi' => '(GMT +5:00) Islamabad, Karachi, Tashkent',
+        'Asia/Calcutta' => '(GMT +5:30) Chennai, Calcutta, Mumbai, New Delhi',
+        'Asia/Katmandu' => '(GMT +5:45) Katmandu',
+        'Asia/Almaty' => '(GMT +6:00) Almaty, Novosibirsk',
+        'Asia/Dhaka' => '(GMT +6:00) Astana, Dhaka, Sri Jayawardenepura',
+        'Asia/Rangoon' => '(GMT +6:30) Rangoon',
+        'Asia/Bangkok' => '(GMT +7:00) Bangkok, Hanoi, Jakarta',
+        'Asia/Krasnoyarsk' => '(GMT +7:00) Krasnoyarsk',
+        'Asia/Hong_Kong' => '(GMT +8:00) 北京, 重庆, 香港, 乌鲁木齐',
+        'Asia/Irkutsk' => '(GMT +8:00) Irkutsk, Ulaan Bataar',
+        'Asia/Singapore' => '(GMT +8:00) Kuala Lumpar, Perth, Singapore, Taipei',
+        'Asia/Tokyo' => '(GMT +9:00) Osaka, Sapporo, Tokyo',
+        'Asia/Seoul' => '(GMT +9:00) Seoul',
+        'Asia/Yakutsk' => '(GMT +9:00) Yakutsk',
+        'Australia/Adelaide' => '(GMT +9:30) Adelaide',
+        'Australia/Darwin' => '(GMT +9:30) Darwin',
+        'Australia/Brisbane' => '(GMT +10:00) Brisbane, Guam, Port Moresby',
+        'Australia/Canberra' => '(GMT +10:00) Canberra, Hobart, Melbourne, Sydney, Vladivostok',
+        'Asia/Magadan' => '(GMT +11:00) Magadan, Soloman Is., New Caledonia',
+        'Pacific/Auckland' => '(GMT +12:00) Auckland, Wellington',
+        'Pacific/Fiji' => '(GMT +12:00) Fiji, Kamchatka, Marshall Is.',
+    );
+}
+
+
+/**
+ * 判断图片上传格式是否为图片 return返回文件后缀
+ */
+function getImagetype($filename){
+    $file = fopen($filename, 'rb');
+    $bin  = fread($file, 2); //只读2字节
+    fclose($file);
+    $strInfo  = unpack('C2chars', $bin);
+    $typeCode = intval($strInfo['chars1'].$strInfo['chars2']);
+    // dd($typeCode);
+    $fileType = '';
+    switch ($typeCode) {
+        case 255216:
+            $fileType = 'jpg';
+            break;
+        case 7173:
+            $fileType = 'gif';
+            break;
+        case 6677:
+            $fileType = 'bmp';
+            break;
+        case 13780:
+            $fileType = 'png';
+            break;
+        default:
+            $fileType = '只能上传图片类型格式';
+    }
+    // if ($strInfo['chars1']=='-1' AND $strInfo['chars2']=='-40' ) return 'jpg';
+    // if ($strInfo['chars1']=='-119' AND $strInfo['chars2']=='80' ) return 'png';
+    return $fileType;
+}
+
+/**
+ * 根据ID获取目录形式。例如 0/0
+ */
+function getDirPath($projectid){
+    $menu2 = intval($projectid / 1000);
+    $menu1 = intval($menu2 / 1000);
+    $path = $menu1 . '/' . $menu2;
+    return $path;
+}
+
+/**
+ * 等比计算
+ */
+function dengBi($width,$height,$maxX=1280,$maxY=1280){
+    //计算缩放比例
+    $scale = ($maxX/$width)>($maxY/$height)?$maxY/$height:$maxX/$width;
+    //计算缩放后的尺寸
+    $sWidth = floor($width*$scale);
+    $sHeight = floor($height*$scale);
+
+    return array(
+        'w'=>$sWidth,
+        'h'=>$sHeight,
+    );
 }

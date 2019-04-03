@@ -17,7 +17,7 @@ if($strPhoto == ''){
 }
 
 $strPhoto['photoname'] = tsTitle($strPhoto['photoname']);
-$strPhoto['photodesc'] = tsDecode($strPhoto['photodesc']);
+$strPhoto['photodesc'] = tsTitle($strPhoto['photodesc']);
 
 $albumid = $strPhoto['albumid'];
 
@@ -25,7 +25,7 @@ $albumid = $strPhoto['albumid'];
 $strPhoto['tags'] = aac('tag')->getObjTagByObjid('photo', 'photoid', $strPhoto['photoid']);
 
 //用户 
-$strPhoto['user'] = aac('user')->getOneUser($strPhoto['userid']);
+$strPhoto['user'] = aac('user')->getSimpleUser($strPhoto['userid']);
 
 //相册下所有图片
 $arrPhoto = $new['photo']->findAll('photo',array(
@@ -38,7 +38,7 @@ $strAlbum = $new['photo']->find('photo_album',array(
 ));
 
 $strAlbum['albumname'] = tsTitle($strAlbum['albumname']);
-$strAlbum['albumdesc'] = tsDecode($strAlbum['albumdesc']);
+$strAlbum['albumdesc'] = tsTitle($strAlbum['albumdesc']);
 
 $arrPhotoIds = $new['photo']->findAll('photo',array(
 
@@ -59,7 +59,7 @@ $prev = $arrPhotoId[$nowkey - 1];
 $next = $arrPhotoId[$nowkey +1];
 
 $userid = $strAlbum['userid'];
-$strUser = aac('user')->getOneUser($userid);
+$strUser = aac('user')->getSimpleUser($userid);
 
 //评论列表 
 $page = isset($_GET['page']) ? intval($_GET['page']) : 1;
@@ -73,8 +73,8 @@ $arrComments = $new['photo']->findAll('photo_comment',array(
 
 foreach($arrComments as $key=>$item){
 	$arrComment[] = $item;
-	$arrComment[$key]['user'] = aac('user')->getOneUser($item['userid']);
-	$arrComment[$key]['content'] = tsDecode($item['content']);
+	$arrComment[$key]['user'] = aac('user')->getSimpleUser($item['userid']);
+	$arrComment[$key]['content'] = tsTitle($item['content']);
 }
 
 $comment_num = $new['photo']->findCount('photo_comment',array(
@@ -84,11 +84,9 @@ $comment_num = $new['photo']->findCount('photo_comment',array(
 $pageUrl = pagination($comment_num, 10, $page, $url);
 
 
-if($TS_USER['userid'] == $userid){
-	$title = '我的相册-'.$strAlbum['albumname'].'-第'.$nowPage.'张';
-}else{
-	$title = $strUser['username'].'的相册-'.$strAlbum['albumname'].'-第'.$nowPage.'张';
-}
+
+$title = $strAlbum['albumname'].'(第'.$nowPage.'张)';
+
 
 include template("show");
 

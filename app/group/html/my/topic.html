@@ -1,4 +1,4 @@
-{template header}
+{php include pubTemplate("header")}
 <div class="container">
 
 
@@ -6,7 +6,7 @@
     <div class="row">
 
 
-        <div class="col-md-2">
+        <div class="col-md-3">
 
             <div class="my_left">
 
@@ -15,13 +15,13 @@
             </div>
 
         </div>
-        <div class="col-md-10">
+        <div class="col-md-9">
 
 
 
-            <div class="panel panel-default">
-                <div class="panel-heading">我发布的帖子</div>
-                <div class="panel-body">
+            <div class="card">
+                <div class="card-header">我发布的帖子</div>
+                <div class="card-body">
 
 
 
@@ -33,7 +33,7 @@
                         </thead>
                         <tbody>
                         {loop $arrTopic $key $item}
-                        <tr><td>{php echo date('Y-m-d',$item['addtime'])}</td><td><a href="{tsUrl('group','topic',array('id'=>$item['topicid']))}">{$item['title']}</a></td><td>{$item['count_view']}/{$item['count_comment']}</td><td><a href="{tsUrl('group','topicedit',array('topicid'=>$item['topicid']))}">修改</a></td></tr>
+                        <tr><td>{php echo date('Y-m-d',$item['addtime'])}</td><td><a href="{tsUrl('group','topic',array('id'=>$item['topicid']))}">{php echo tsTitle($item['title'])}</a></td><td>{$item['count_view']}/{$item['count_comment']}</td><td><a href="{tsUrl('group','topicedit',array('topicid'=>$item['topicid']))}">修改</a></td></tr>
                         {/loop}
                         </tbody>
                     </table>
@@ -57,4 +57,4 @@
 
 
 </div>
-{template footer}
+{php include pubTemplate("footer")}

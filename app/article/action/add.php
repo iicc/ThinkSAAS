@@ -7,6 +7,9 @@ $userid = aac('user') -> isLogin();
 //判断发布者状态
 if(aac('user')->isPublisher()==false) tsNotice('不好意思，你还没有权限发布内容！');
 
+//发布时间限制
+if(aac('system')->pubTime()==false) tsNotice('不好意思，当前时间不允许发布内容！');
+
 
 switch ($ts) {
 	case "" :
@@ -16,6 +19,14 @@ switch ($ts) {
 
 		$cateid = intval($_GET['cateid']);
 
+
+        foreach ($arrCate as $key=>$item){
+            $arrCate[$key]['two'] = $new['article']->findAll('article_cate',array(
+                'referid'=>$item['cateid'],
+            ));
+        }
+
+
 		$title = '发布文章';
 		include  template('add');
 		break;
@@ -24,6 +35,10 @@ switch ($ts) {
 
 
 		$cateid = intval($_POST['cateid']);
+		$cateid2 = intval($_POST['cateid2']);
+
+		if($cateid2) $cateid = $cateid2;
+        
 		$title = trim($_POST['title']);
 		$content = tsClean($_POST['content']);
 		$gaiyao = trim($_POST['gaiyao']);
@@ -40,6 +55,20 @@ switch ($ts) {
 
 		if ($title == '' || $content == '')
 			tsNotice("标题和内容都不能为空！");
+
+        $isTitle = $new['article']->findCount('article',array(
+            'title'=>$title,
+        ));
+
+        if($isTitle){
+            tsNotice("相同标题的文章已经存在！");
+        }
+
+        if($gaiyao){
+            $gaiyao = cututf8($gaiyao,0,100);
+        }else{
+            $gaiyao = cututf8(t(tsDecode($content)),0,100);
+        }
 
 		//1审核后显示0不审核
 		if ($TS_APP['isaudit'] == 1) {
@@ -59,7 +88,7 @@ switch ($ts) {
             'addtime' => date('Y-m-d H:i:s')
         ));
 
-		// 上传帖子图片开始
+		// 上传图片开始
 		$arrUpload = tsUpload($_FILES['photo'], $articleid, 'article', array('jpg', 'gif', 'png', 'jpeg'));
 		if ($arrUpload) {
 			$new['article'] -> update('article', array(
@@ -68,14 +97,25 @@ switch ($ts) {
                 'path' => $arrUpload['path'],
                 'photo' => $arrUpload['url']
             ));
+
+
+			#生成不同尺寸的图片
+            tsXimg($arrUpload['url'],'article',320,180,$arrUpload['path'],'1');
+            tsXimg($arrUpload['url'],'article',640,'',$arrUpload['path']);
+
+
 		}
-		// 上传帖子图片结束
+		// 上传图片结束
 
 		// 处理标签
 		aac('tag') -> addTag('article', 'articleid', $articleid, $tag);
 
+
 		// 对积分进行处理
-		aac('user') -> doScore($TS_URL['app'], $TS_URL['ac'], $TS_URL['ts']);
+        if($isaudit==0){
+            aac('user') -> doScore($TS_URL['app'], $TS_URL['ac'], $TS_URL['ts']);
+        }
+
 
 		header("Location: " . tsUrl('article', 'show', array('id' => $articleid)));
 

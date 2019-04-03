@@ -22,7 +22,7 @@ switch($ts){
 		//小组组长信息
 		$leaderId = $strGroup['userid'];
 
-		$strLeader = aac('user')->getOneUser($leaderId);
+		$strLeader = aac('user')->getSimpleUser($leaderId);
 
 		//管理员信息
 		
@@ -35,7 +35,7 @@ switch($ts){
 
 		if(is_array($strAdmin)){
 			foreach($strAdmin as $key=>$item){
-				$arrAdmin[] = aac('user')->getOneUser($item['userid']);
+				$arrAdmin[] = aac('user')->getSimpleUser($item['userid']);
 				$arrAdmin[$key]['isadmin'] = $item['isadmin'];
 			}
 		}
@@ -67,7 +67,7 @@ switch($ts){
 
 		if(is_array($groupUser)){
 			foreach($groupUser as $key=>$item){
-				$arrGroupUser[] = aac('user')->getOneUser($item['userid']);
+				$arrGroupUser[] = aac('user')->getSimpleUser($item['userid']);
 				$arrGroupUser[$key]['isadmin'] = $item['isadmin'];
 			}
 		}
@@ -85,77 +85,5 @@ switch($ts){
 		include template("user");
 		
 		break;
-		
-	//设为管理员 
-	case "manager":
-		
-		$nuserid = intval($TS_USER['userid']);
-		
-		if($nuserid==0){
-			echo '0';exit;//非法操作
-		}
-		
-		$groupid = intval($_POST['groupid']);
-		$userid= intval($_POST['userid']);
-		
-		$strGroup = $new['group']->find('group',array(
-			'groupid'=>$groupid,
-		));
-		
-		if($strGroup['groupid'] == $groupid){
-		
-			$strGroupUser = $new['group']->find('group_user',array(
-				'userid'=>$userid,
-				'groupid'=>$groupid,
-			));
-			
-			if($strGroup['userid'] != $userid && $strGroup['userid']==$nuserid){
-			
-			
-				if($strGroupUser['isadmin']==1){
-				
-					$new['group']->update('group_user',array(
-						'userid'=>$userid,
-						'groupid'=>$groupid,
-					),array(
-					
-						'isadmin'=>0,
-					
-					));
-				
-				}elseif($strGroupUser['isadmin']==0){
-				
-					$new['group']->update('group_user',array(
-						'userid'=>$userid,
-						'groupid'=>$groupid,
-					),array(
-					
-						'isadmin'=>1,
-					
-					));
-				
-				}
-				
-				echo '1';exit;
-			
-			
-			}else{
-			
-				echo '0';exit;
-			
-			}
-			
-			
-			
-		
-		}else{
-			
-			echo '0';exit;
-		
-		}
-	
-		break;
-	
-	//删除成员
 	
 }

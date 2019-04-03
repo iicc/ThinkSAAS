@@ -21,8 +21,8 @@ switch ($ts) {
 		
 		if ($strArticle ['userid'] == $userid || $TS_USER ['isadmin'] == 1) {
 		
-			$strArticle['title'] = stripslashes($strArticle['title']);
-			//$strArticle['content'] = tsDecode($strArticle['content']);
+			$strArticle['title'] = tsTitle($strArticle['title']);
+			$strArticle['content'] = tsDecode($strArticle['content']);
 			
 			// 找出TAG
 			$arrTags = aac ( 'tag' )->getObjTagByObjid ( 'article', 'articleid', $articleid );
@@ -30,6 +30,13 @@ switch ($ts) {
 				$arrTag [] = $item ['tagname'];
 			}
 			$strArticle ['tag'] = arr2str ( $arrTag );
+
+            foreach ($arrCate as $key=>$item){
+                $arrCate[$key]['two'] = $new['article']->findAll('article_cate',array(
+                    'referid'=>$item['cateid'],
+                ));
+            }
+
 			
 			$title = '修改文章';
 			include template ( 'edit' );
@@ -53,6 +60,10 @@ switch ($ts) {
 		}
 		
 		$cateid = intval ( $_POST ['cateid'] );
+		$cateid2 = intval ( $_POST ['cateid2'] );
+
+		if($cateid2) $cateid = $cateid2;
+
 		$title = trim ( $_POST ['title'] );
 		$content = tsClean ( $_POST ['content'] );
 		$gaiyao = trim ( $_POST ['gaiyao'] );
@@ -68,13 +79,22 @@ switch ($ts) {
 			qiMsg ( "标题和内容都不能为空！" );
 		
 		$new ['article']->update ( 'article', array (
-			'articleid' => $articleid 
+			'articleid' => $articleid,
 		), array (		
-			'cateid' => $cateid,
+			//'cateid' => $cateid,
 			'title' => $title,
 			'content' => $content ,
 			'gaiyao' => $gaiyao
 		));
+
+		#更新分类
+		if($cateid){
+            $new['article']->update('article',array(
+                'articleid' => $articleid,
+            ),array(
+                'cateid' => $cateid,
+            ));
+        }
 		
 		// 处理标签
 		$tag = trim ( $_POST ['tag'] );
@@ -87,19 +107,22 @@ switch ($ts) {
 		$arrUpload = tsUpload ( $_FILES ['photo'], $articleid, 'article', array ('jpg','gif','png','jpeg' ) );
 		if ($arrUpload) {
 			$new ['article']->update ( 'article', array (
-					'articleid' => $articleid 
+                'articleid' => $articleid
 			), array (
-					'path' => $arrUpload ['path'],
-					'photo' => $arrUpload ['url'] 
+                'path' => $arrUpload ['path'],
+                'photo' => $arrUpload ['url']
 			) );
-			
-			tsDimg ( $arrUpload ['url'], 'article', '180', '140', $arrUpload ['path'] );
+
+            #生成不同尺寸的图片
+			tsDimg ($arrUpload ['url'], 'article', '320', '180', $arrUpload ['path']);
+			tsDimg ($arrUpload ['url'], 'article', '640', '', $arrUpload ['path']);
+            tsXimg($arrUpload['url'],'article',320,180,$arrUpload['path'],'1');
+            tsXimg($arrUpload['url'],'article',640,'',$arrUpload['path']);
+
 		}
 		// 上传帖子图片结束
 		
-		header ( "Location: " . tsUrl ( 'article', 'show', array (
-				'id' => $articleid 
-		) ) );
+		header ("Location: " . tsUrl ( 'article', 'show', array ('id' => $articleid)));
 		
 		break;
 }

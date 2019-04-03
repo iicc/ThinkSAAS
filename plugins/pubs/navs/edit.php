@@ -9,21 +9,24 @@ switch($ts){
 		if($arrNav==''){
 			$arrNav = $tsMySqlCache->get('plugins_pubs_navs');
 		}
-		
-		include 'edit_set.html';
+
+        include template('edit_set','navs');
 		break;
 		
 	case "do":
 		$arrNavName = $_POST['navname'];
 		$arrNavUrl = $_POST['navurl'];
-		
+		$arrNewPage = $_POST['newpage'];
+
 		foreach($arrNavName as $key=>$item){
 			$navname = trim($item);
 			$navurl = trim($arrNavUrl[$key]);
+			$newpage = trim($arrNewPage[$key]);
 			if($navname && $navurl){
 				$arrNav[] = array(
 					'navname'	=> $navname,
 					'navurl'	=> $navurl,
+					'newpage'	=> $newpage,
 				);
 			}
 			

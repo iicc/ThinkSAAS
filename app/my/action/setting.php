@@ -16,7 +16,7 @@ switch($ts){
 		$phone = t($_POST['phone']);
 		$blog = t($_POST['blog']);
 		$about = t($_POST['about']);
-		$sex = intval($_POST['sex']);
+		$sex = t($_POST['sex']);
 
 		if($TS_USER == '') {
 		
@@ -91,35 +91,13 @@ switch($ts){
 			'about' => $about,
 		));
 
+		#更新session用户名
+        $_SESSION['tsuser']['username'] = $username;
+
 		tsNotice("基本资料更新成功！");
 	
 		break;
-		
-	case "flash":
-	
-		
-		$title = 'Flash上传头像';
-		include template('setting_flash');
-	
-		break;
-		
-	case "cut":
-		
-		$title = '裁切头像';
-		include template('setting_cut');
-	
-		break;
-		
-	case "cutdo":
-		
-		require_once 'thinksaas/tsImage.php';
-		$resizeimage = new tsImage("uploadfile/user/".$strUser['face'], 190, 190, 2,"uploadfile/user/".$strUser['face']);
-		
-		tsDimg($strUser['face'],'user','120','120',$strUser['path']);
-		
-		header('Location: '.tsUrl('my','setting',array('ts'=>'face')));
-	
-		break;
+
 		
 	case "face":
 
@@ -133,10 +111,10 @@ switch($ts){
 	//执行上传头像
 	case "facedo":
 	
-		if($_FILES['picfile']){
+		if($_FILES['photo']){
 			
 			//上传
-			$arrUpload = tsUpload($_FILES['picfile'],$userid,'user',array('jpg','gif','png'));
+			$arrUpload = tsUpload($_FILES['photo'],$userid,'user',array('jpg','gif','png','jpeg'));
 			
 			if($arrUpload){
 

@@ -21,6 +21,38 @@ switch($ts){
 		include template("admin/group_list");
 		
 		break;
+
+
+    //推荐的小组
+    case "recommend":
+
+        $arrGroup = $new['group']->findAll('group',array(
+            'isrecommend'=>1,
+        ),'orderid asc','groupid,orderid,groupname,isrecommend');
+
+
+        include template("admin/group_recommend");
+
+        break;
+
+
+    case "orderid":
+
+        $arrGroupid = $_POST['groupid'];
+        $arrOrderid = $_POST['orderid'];
+
+        foreach($arrGroupid as $key=>$item){
+            $new['group']->update('group',array(
+                'groupid'=>intval($item)
+            ),array(
+                'orderid'=>intval($arrOrderid[$key])
+            ));
+        }
+
+        qiMsg('修改成功！');
+
+        break;
+
 	
 	//小组编辑
 	case "edit":
@@ -66,20 +98,31 @@ switch($ts){
 		
 	//审核小组 
 	case "isaudit":
+
 		$groupid = intval($_GET['groupid']);
+
+		$strGroup = $db->once_fetch_assoc("select groupid,userid,groupname,isaudit from ".dbprefix."group where groupid='$groupid'");
+
+        if($strGroup['isaudit']){
+
+            $db->query("update ".dbprefix."group set `isaudit`='0' where groupid='$groupid'");
+
+            //发送系统消息(审核通过)
+            $msg_userid = '0';
+            $msg_touserid = $strGroup['userid'];
+            $msg_content = '恭喜你，你申请的小组《'.$strGroup['groupname'].'》审核通过！快去看看吧';
+            $msg_tourl = tsUrl('group','show',array('id'=>$groupid));
+            aac('message')->sendmsg($msg_userid,$msg_touserid,$msg_content,$msg_tourl);
+
+        }else{
+
+            $db->query("update ".dbprefix."group set `isaudit`='1' where groupid='$groupid'");
+
+        }
 		
-		$db->query("update ".dbprefix."group set `isaudit`='0' where groupid='$groupid'");
+
 		
-		$strGroup = $db->once_fetch_assoc("select groupid,userid,groupname from ".dbprefix."group where groupid='$groupid'");
-		
-		//发送系统消息(审核通过)
-		$msg_userid = '0';
-		$msg_touserid = $strGroup['userid'];
-		$msg_content = '恭喜你，你申请的小组《'.$strGroup['groupname'].'》审核通过！快去看看吧';
-        $msg_tourl = tsUrl('group','show',array('id'=>$groupid));
-		aac('message')->sendmsg($msg_userid,$msg_touserid,$msg_content,$msg_tourl);
-		
-		qiMsg("小组审核通过！");
+		qiMsg("操作成功！");
 		
 		break;
 	
